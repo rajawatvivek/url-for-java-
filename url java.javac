@@ -1,0 +1,120 @@
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+
+public class URLHashGenerator {
+
+    public static String generateHash(String url) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(url.getBytes());
+            String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+            return encoded.substring(0, 6); // Using first 6 characters as short URL
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+}
+import java.util.HashMap;
+import java.util.Map;
+
+public class URLStorage {
+
+    private Map<String, String> urlMap;
+
+    public URLStorage() {
+        this.urlMap = new HashMap<>();
+    }
+
+    public boolean containsShortUrl(String shortUrl) {
+        return urlMap.containsKey(shortUrl);
+    }
+
+    public boolean containsLongUrl(String longUrl) {
+        return urlMap.containsValue(longUrl);
+    }
+
+    public void addMapping(String shortUrl, String longUrl) {
+        urlMap.put(shortUrl, longUrl);
+    }
+
+    public String getLongUrl(String shortUrl) {
+        return urlMap.get(shortUrl);
+    }
+}
+public class URLShortenerService {
+
+    private URLStorage urlStorage;
+
+    public URLShortenerService() {
+        this.urlStorage = new URLStorage();
+    }
+
+    public String shortenURL(String longUrl) {
+        if (urlStorage.containsLongUrl(longUrl)) {
+            return getKeyByValue(urlStorage, longUrl); // Return existing short URL
+        } else {
+            String shortUrl = URLHashGenerator.generateHash(longUrl);
+            urlStorage.addMapping(shortUrl, longUrl);
+            return shortUrl;
+        }
+    }
+
+    public String expandURL(String shortUrl) {
+        if (urlStorage.containsShortUrl(shortUrl)) {
+            return urlStorage.getLongUrl(shortUrl);
+        } else {
+            return "Invalid short URL";
+        }
+    }
+
+    private String getKeyByValue(URLStorage map, String value) {
+        for (Map.Entry<String, String> entry : map.urlMap.entrySet()) {
+            if (entry.getValue().equals(value)) {
+                return entry.getKey();
+            }
+        }
+        return null; 
+    }
+}
+import java.util.Scanner;
+
+public class Main {
+
+    private static URLShortenerService shortenerService = new URLShortenerService();
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.println("Choose an option:");
+            System.out.println("1. Shorten URL");
+            System.out.println("2. Expand URL");
+            System.out.println("3. Exit");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter URL to shorten: ");
+                    String longUrl = scanner.nextLine().trim();
+                    String shortUrl = shortenerService.shortenURL(longUrl);
+                    System.out.println("Shortened URL: " + shortUrl);
+                    break;
+                case 2:
+                    System.out.print("Enter short URL to expand: ");
+                    String shortUrlInput = scanner.nextLine().trim();
+                    String expandedUrl = shortenerService.expandURL(shortUrlInput);
+                    System.out.println("Expanded URL: " + expandedUrl);
+                    break;
+                case 3:
+                    System.out.println("Exiting...");
+                    return;
+                default:
+                    System.out.println("Invalid choice. Please enter again.");
+                    break;
+            }
+        }
+    }
+}
